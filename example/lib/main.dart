@@ -1,3 +1,7 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:xterm/flutter.dart';
 import 'package:xterm/xterm.dart';
@@ -29,22 +33,24 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   Terminal terminal;
+  Socket socket;
 
   @override
   void initState() {
     super.initState();
-    terminal = Terminal(onInput: onInput);
-    terminal.write('xterm.dart demo');
-    terminal.write('\r\n');
-    terminal.write('\$ ');
+    setUpTerminal();
   }
 
-  void onInput(String input) {
-    if (input == '\r') {
-      terminal.write('\r\n');
-      terminal.write('\$ ');
-    } else {
-      terminal.write(input);
+  void setUpTerminal() async {
+    terminal = Terminal(onInput: (input) => socket.write(input));
+    socket = await Socket.connect('127.0.0.1', 63159);
+    print(
+      'connected to cmdr-pty via'
+      ': ${socket.remoteAddress.address}:${socket.remotePort}');
+
+    await for (var data in socket) {
+      var decodedString = utf8.decoder.convert(data);
+      terminal.write(decodedString);
     }
   }
 
